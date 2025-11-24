@@ -67,7 +67,7 @@ local.properties
 *.key
 *.crt
 *.cert
-**/config/
+**/config/**
 **/secrets/
 /secrets/
 /config/
@@ -82,7 +82,6 @@ yggdrasil
 # ---- Debug & system ----
 *.dSYM/
 *.map
-core
 
 # ---- Logs ----
 logs
