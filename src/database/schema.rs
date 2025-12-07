@@ -13,7 +13,7 @@ pub struct Model {
     pub display_name: String,    // User-friendly name
     pub is_active: bool,    // Connection status
     pub last_seen: Option<DateTimeUtc>,    // Last activity timestamp
-    pub created_at: DateTimeUtc,    // Message creation time
+    pub created_at: DateTimeUtc,    // Record creation time
     pub updated_at: DateTimeUtc,    // Last update time
     pub is_hidden_peer: bool,
     pub notes: Option<String>,
