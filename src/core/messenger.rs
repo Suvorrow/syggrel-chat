@@ -1,3 +1,4 @@
+use tokio::io::{AsyncBufReadExt, BufReader};
 use tokio::net::TcpStream;
 use tokio::sync::{mpsc, Mutex};
 use tokio_socks::tcp::Socks5Stream;
@@ -44,7 +45,6 @@ impl YggdrasilMessenger {
 
             // Task for receiving messages
             let recv_task = tokio::spawn(async move {
-                use tokio::io::{AsyncBufReadExt, BufReader};
                 let mut buf_reader = BufReader::new(reader);
                 let mut line = String::new();
                 let buffer = buffer.clone();
@@ -76,6 +76,16 @@ impl YggdrasilMessenger {
                 while let Ok(msg) = rx.recv().await {
                     if let Err(e) = writer.write_all(msg.as_bytes()).await {
                         eprintln!("Write error: {}", e);
+                        break;
+                    }
+                    // Add newline delimiter to separate messages
+                    if let Err(e) = writer.write_all(b"\n").await {
+                        eprintln!("Write error: {}", e);
+                        break;
+                    }
+                    // Ensure data is sent immediately
+                    if let Err(e) = writer.flush().await {
+                        eprintln!("Flush error: {}", e);
                         break;
                     }
                 }
@@ -114,5 +124,16 @@ impl YggdrasilMessenger {
         } else {
             Err("Not connected".into())
         }
+    }
+
+    // Disconnect and resource cleanup method
+    pub async fn disconnect(&mut self) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+        if let Some(handle) = self.connection_handle.take() {
+            handle.abort();
+            let _ = tokio::time::timeout(std::time::Duration::from_secs(1), handle).await;
+        }
+
+        self.message_tx = None;
+        Ok(())
     }
 }

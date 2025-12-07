@@ -6,8 +6,10 @@ edition = "2024"
 [dependencies]
 dioxus = { version = "0.7.0", features = ["fullstack", "router"] }
 tokio = { version = "1.0", features = ["full"] }
+sea-orm = { version = "1.1", features = ["sqlx-sqlite", "runtime-tokio-native-tls", "macros", "derive"] }
 serde = { version = "1.0", features = ["full"] }
 serde_json = { version = "1.0", features = ["derive"] }
+sqlx = { version = "0.8", features = ["sqlite", "runtime-tokio-native-tls"] }
 log = "0.4"
 env_logger = "0.11"
 

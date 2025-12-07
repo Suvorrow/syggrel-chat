@@ -1,10 +1,9 @@
 use std::collections::VecDeque;
 use std::sync::Arc;
-use tokio::sync::{mpsc, Mutex};
-use tokio::task::JoinHandle;
+use tokio::sync::Mutex;
 
-const MAX_MESSAGES: usize = 256;
-const MAX_TOTAL_BYTES: usize = 16 * 1024 * 1024; // 16MB Limit
+pub const MAX_MESSAGES: usize = 256;
+pub const MAX_TOTAL_BYTES: usize = 16 * 1024 * 1024; // 16MB Limit
 
 // ---- Shared state for the message buffer ----
 struct SlidingWindowBuffer {
@@ -51,9 +50,7 @@ impl SlidingWindowBuffer {
                 result.push(msg);
             }
         }
-
         result
-
     }
 }
 
@@ -71,13 +68,13 @@ impl MessageBuffer {
     } 
 
     // Add message to the buffer
-    async fn push_message(&self, msg: String) {
+    pub async fn push_message(&self, msg: String) {
         let mut buffer_guard = self.buffer.lock().await;
         buffer_guard.add_message(msg);
     }
 
     // Take messages from the buffer
-    async fn take_messages(&self, count: usize) -> Vec<String> {
+    pub async fn take_messages(&self, count: usize) -> Vec<String> {
         let mut buffer_guard = self.buffer.lock().await;
         buffer_guard.get_next_n_messages(count)
     }
