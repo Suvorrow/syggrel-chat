@@ -1,16 +1,19 @@
-/// Initializes the database connection and runs migrations
+/// Database module for Syggrel Chat
 /// 
-/// This function establishes a connection to the SQLite database at the specified path,
-/// creates the required tables if they don't exist (via migrations), and stores the
-/// connection in a global static variable for use throughout the application.
-/// The database is opened in read-write-create mode, meaning it will be created
-/// if it doesn't exist. This function should be called once during application startup.
-pub mod schema;
-pub mod models;
-
-use sea_orm::{Database, DatabaseConnection};
+/// This module manages the SQLite database connection, handles migrations,
+/// and provides functions for database operations. It uses SeaORM as the
+/// ORM layer and maintains a single shared connection pool accessible
+/// globally via the OnceCell pattern.
+use crate::database::models::Contact;
+use sea_orm::{
+    ColumnTrait, EntityTrait, Database, DatabaseConnection, QueryFilter, QuerySelect
+};
 use std::sync::Arc;
 use tokio::sync::OnceCell;
+use tracing::{info, error, instrument};
+
+pub mod schema;
+pub mod models;
 
 static DB: OnceCell<Arc<DatabaseConnection>> = OnceCell::const_new();
 
@@ -63,4 +66,37 @@ pub async fn ensure_db_initialized() -> Result<(), &'static str> {
         return Err("Database not initialized. Call init_db() first.");
     }
     Ok(())
+}
+
+#[instrument(skip())]
+pub async fn load_contacts_from_db() -> Result<Vec<crate::chat_item::ChatItem>, String> {
+    let db = get_db()
+        .ok_or_else(|| {
+            error!("Database not initialized - call init_db() first");
+            "Database not initialized".to_string()
+        })?;
+    
+    // Execute the query to fetch active contacts
+    let active_contacts = entity::contact::Entity::find()
+        .filter(entity::contact::Column::IsActive.eq(true))
+        .all(&*db)    // Dereference Arc to get DatabaseConnection
+        .await
+        .map_err(|e| {
+            error!("Database query failed: {}", e);
+            "Failed to load contacts from database".to_string()
+        })?;
+    
+    let chat_items: Vec<crate::chat_item::ChatItem > = active_contacts
+        .into_iter()
+        .map(|model| crate::chat_item::ChatItem {
+            id: model.id.to_string(),    // Convert i32 to string for ChatItem
+            name: model.display_name,
+            last_message: String::new(),
+            timestamp: model.last_seen.map(|dt| dt.to_rfc3339()).unwrap_or_default(),
+        })
+        .collect();
+
+    info!("Successfully loaded {} active contacts from database", chat_items.len());
+
+    Ok(chat_items)
 }
